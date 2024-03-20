@@ -1,0 +1,74 @@
+# This workflow demonstrates how you can use various enironments (development, staging, production) in GitHub
+
+name: CI + CD demo pipeline
+
+# Define when the workflow should run. On a push to main, a PR to main or manually 
+
+on: 
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+# Defin some jobs that should run
+
+jobs: 
+    # Define a build job
+    Build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Code_scanning
+              run: echo We are linting and scanning our code here
+            - name: Compile-build
+              run: echo We are building our code
+            - name: Test
+              run: echo We are testing our code
+            - name: ChecksComplete
+              run: echo Checks complete we can deploy
+    
+    # Build and test have passed sucessfully
+
+    # Define a deploy to development environment job
+    DeployDev:
+        name: Deploy to Development
+        # Job only runs if the event that triggered it was a pull request
+        if: github.event_name == 'pull_request'
+        # The job needs the build job to have passed
+        needs: [ Build ]
+        runs-on: ubuntu-latest
+        #Define some environment variables
+        environment: 
+            # The environment must match the environment name in the repository
+            name: Development
+            url: 'http://dev.myapp.com'
+        steps:
+            - name: Deploy to dev
+              run: echo You code is being deployed to http://dev.myapp.com
+    
+    # Deploy to our staging environment on a push to main after a successful PR
+    DeployStaging:
+        name: Deploy to staging
+        # deploy to staging only if we are committing to main
+        if: github.event.ref == 'refs/heads/main'
+        needs: [ Build ]
+        runs-on: ubuntu-latest
+        environment: 
+            name: Staging
+            url: 'http://test.myapp.com'
+        steps:
+            - name: Deploy
+              run: echo I am deploying to staging http://test.myapp.com
+    
+    # Deploy to production environment
+    DeployProduction:
+        name: Deploy to production
+        needs: [ DeployStaging ]
+        runs-on: ubuntu-latest
+        environment:
+            name: Production
+            url: 'http://www.myapp.com'
+        steps:
+            - name: Deploy
+              run: echo I am deploying to production
